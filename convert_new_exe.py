@@ -113,6 +113,8 @@ def ScreenShotID_to_NewBuildID(srcfile,destfile,screenid):
     s_mdb=c_mdb.cursor()
     res1=s_mdb.execute("SELECT ProductID,BuildID FROM OSInformation Where ScreenShotID="+str(screenid)+";")
     row1=res1.fetchone()
+    if(row1==None):
+        return -1
     return OldBuildID_to_NewBuildID(srcfile,destfile,row1[0],row1[1])
 def convert_db(srcfile,destfile):
     c_mdb=connect_db(srcfile)
@@ -123,7 +125,7 @@ def convert_db(srcfile,destfile):
     s_sl3.execute("create table 'Contributor' ('ID' integer primary key autoincrement, 'Name' text not null unique);")
     s_sl3.execute("create table 'Version' ('Version' text not null, 'Date' date not null, 'UpdateURL' text not null);")
     s_sl3.execute("create table 'Product' ('ID' integer primary key autoincrement, 'Name' text not null unique, 'Codename' text);")
-    s_sl3.execute("create table 'Build' ('ID' integer primary key autoincrement, 'ProductID' integer not null, 'Version' text not null, 'Stage' text not null, 'Buildtag' text not null, 'Architecture' text not null, 'Edition' text, 'Language' text not null, 'Date' date not null, 'Serial' text, 'Notes' text, 'NotesEN' text, foreign key ('ProductID') references 'Product'('ID') on update cascade on delete cascade);")
+    s_sl3.execute("create table 'Build' ('ID' integer primary key autoincrement, 'ProductID' integer not null, 'Version' text not null, 'Stage' text not null, 'Buildtag' text not null, 'Architecture' text not null, 'Edition' text, 'Language' text not null, 'Date' date not null, 'Serial' text, 'Notes' text, 'NotesEN' text, 'CodeName' text, foreign key ('ProductID') references 'Product'('ID') on update cascade on delete cascade);")
     s_sl3.execute("create table 'ChangeLog' ('Version' text not null, 'BuildID' integer not null, foreign key ('BuildID') references 'Build'('ID') on update cascade on delete cascade);")
     #转换Contributor
     res=s_mdb.execute("select ID,ContributorName from ContributorList")
@@ -147,13 +149,13 @@ def convert_db(srcfile,destfile):
         row=res.fetchone()
     c_sl3.commit()
     #转换BuildList
-    res=s_mdb.execute("SELECT ProductName,Stage,Version,BuildTag,Architecture,Edition,Language,BIOSDate,SerialNumber,Fixes,FixesEN FROM OSInformation order by ProductID,BuildID")
+    res=s_mdb.execute("SELECT ProductName,Stage,Version,BuildTag,Architecture,Edition,Language,BIOSDate,SerialNumber,Fixes,FixesEN,CodeName FROM OSInformation order by ProductID,BuildID")
     row=res.fetchone()
     while(row!=None):
         print("正在转换BuildList："+str(row))
         proid=get_ProductID(destfile,row[0])
         print("insert into 'Build' values (null, "+str(proid)+", '"+row[2]+"', '"+row[1]+"', '"+row[3]+"', '"+row[4]+"', '"+row[5]+"', '"+row[6]+"', '"+datetime.datetime.strftime(row[7], "%Y/%m/%d")+"', '"+row[8]+"', '"+str(row[9]).replace("'","''")+"', '"+str(row[10]).replace("'","''")+"');")
-        s_sl3.execute("insert into 'Build' values (null, "+str(proid)+", '"+row[2]+"', '"+row[1]+"', '"+row[3]+"', '"+row[4]+"', '"+row[5]+"', '"+row[6]+"', '"+datetime.datetime.strftime(row[7], "%Y/%m/%d")+"', '"+row[8]+"', '"+str(row[9]).replace("'","''")+"', '"+str(row[10]).replace("'","''")+"');")
+        s_sl3.execute("insert into 'Build' values (null, "+str(proid)+", '"+row[2]+"', '"+row[1]+"', '"+row[3]+"', '"+row[4]+"', '"+row[5]+"', '"+row[6]+"', '"+datetime.datetime.strftime(row[7], "%Y/%m/%d")+"', '"+row[8]+"', '"+str(row[9]).replace("'","''")+"', '"+str(row[10]).replace("'","''")+"','"+str(row[11]).replace("'","''")+"');")
         print("转换成功："+str(proid))
         row=res.fetchone()
     c_sl3.commit()
@@ -198,8 +200,8 @@ def do_picture(src,dest,mdb,sl3):
             print("对应的截图ID:"+str(screenid))
             if screenid!=-1:
                 shutil.copytree(os.path.join(src,str(d)),os.path.join(dest,str(screenid)))
-            fiobj=open(os.path.join(dest,str(screenid)+"\\"+str(d)),"w+")
-            fiobj.close()
+                fiobj=open(os.path.join(dest,str(screenid)+"\\"+str(d)),"w+")
+                fiobj.close()
             print("复制完成:"+str(screenid))
 def put_watermark_on_pic(dest):
     for root, dirs, files in os.walk(dest):
